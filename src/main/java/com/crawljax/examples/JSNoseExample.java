@@ -16,6 +16,10 @@ import com.crawljax.plugins.aji.executiontracer.AstInstrumenter;
 import com.crawljax.plugins.webscarabwrapper.WebScarabWrapper;
 import com.crawljax.core.configuration.Form;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
 
 /**
  * Simple JSNose Example.
@@ -32,8 +36,9 @@ public final class JSNoseExample {
 	private static boolean doClickOnce = true;         // true: click only once on each clickable, false: multiple click
 	
 	
-	private static final String URL = "http://demo.crawljax.com/";
-	
+//	private static final String URL = "http://demo.crawljax.com/";
+	private static final String URL = "https://ptable.com/#Properties";
+
 	//Final selected experimental objects
 
 	//private static final String URL = "http://localhost/chess/index.html";	// chessGame
@@ -74,8 +79,8 @@ public final class JSNoseExample {
 		CrawljaxConfiguration config = new CrawljaxConfiguration();
 		config.setCrawlSpecification(getCrawlSpecification());
 		config.setThreadConfiguration(getThreadConfiguration());
-		config.setBrowser(BrowserType.firefox);
-		
+		config.setBrowser(BrowserType.chrome);
+
 			
 		// Amin: Create a Proxy for the purpose of code instrumentation
 		config.setProxyConfiguration(new ProxyConfiguration());
@@ -185,6 +190,20 @@ public final class JSNoseExample {
 	 *            the command line args
 	 */
 	public static void main(String[] args) {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		InputStream is = cl.getResourceAsStream("jsnose.properties");
+		Properties p = new Properties();
+		try {
+			p.load(is);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.out.println("Missing Properties ... ");
+			System.exit(1);
+		}
+        String webdriver = p.getProperty("webdriver.chrome.driver");
+        System.setProperty("webdriver.chrome.driver", webdriver);
+
+
 		try {
 			CrawljaxController crawljax = new CrawljaxController(getCrawljaxConfiguration());
 			crawljax.run();
