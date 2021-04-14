@@ -202,6 +202,7 @@ public final class JSNoseExample {
 		}
         String webdriver = p.getProperty("webdriver.chrome.driver");
         System.setProperty("webdriver.chrome.driver", webdriver);
+		System.setProperty("webdriver.gecko.driver", p.getProperty("webdriver.gecko.driver"));
 
 
 		try {
