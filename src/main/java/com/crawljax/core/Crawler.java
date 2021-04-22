@@ -6,8 +6,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import codesmells.JavaScriptObjectInfo;
 import codesmells.SmellDetector;
@@ -28,6 +35,7 @@ import com.crawljax.forms.FormHandler;
 import com.crawljax.forms.FormInput;
 import com.crawljax.plugins.aji.JSModifyProxyPlugin;
 import com.crawljax.util.ElementResolver;
+import com.google.common.collect.ForwardingCollection;
 
 /**
  * Class that performs crawl actions. It is designed to be run inside a Thread.
@@ -44,6 +52,7 @@ public class Crawler implements Runnable {
 	private static HashSet<JavaScriptObjectInfo> largeObjects = new HashSet<JavaScriptObjectInfo>();	// keeping dynamic large objects	
 	private static HashSet<JavaScriptObjectInfo> lazyObjects = new HashSet<JavaScriptObjectInfo>();		// keeping dynamic large objects
 
+	FindSmells findSmells = new FindSmells();
 
 	/**
 	 * Added by Amin
@@ -114,6 +123,10 @@ public class Crawler implements Runnable {
 	 * The object to places calls to add new Crawlers or to remove one.
 	 */
 	private final CrawlQueueManager crawlQueueManager;
+	
+	private Set<String> jsInTag = new HashSet<>();
+	
+	private WebDriver driver = new ChromeDriver();
 
 	/**
 	 * Enum for describing what has happened after a {@link Crawler#clickTag(Eventable)} has been
@@ -329,10 +342,9 @@ public class Crawler implements Runnable {
 	private ClickResult clickTag(final Eventable eventable) throws CrawljaxException {
 		// load input element values
 		this.handleInputElements(eventable);
-
+		
 		LOGGER.info("Executing " + eventable.getEventType() + " on element: " + eventable
 				+ "; State: " + this.getStateMachine().getCurrentState().getName());
-
 
 		// Added by Amin: reducing from CandidateElements of the current state
 		this.getStateMachine().getCurrentState().decreaseCandidateElements();
@@ -432,7 +444,7 @@ public class Crawler implements Runnable {
 
 		return ClickResult.domUnChanged;
 	}
-
+	
 	/**
 	 * Return the Exacteventpath.
 	 *
@@ -700,6 +712,7 @@ public class Crawler implements Runnable {
 	 */
 	@Override
 	public void run() {
+		
 		if (!checkConstraints()) {
 			// Constrains are not met at start of this Crawler, so stop immediately
 			return;
@@ -719,6 +732,7 @@ public class Crawler implements Runnable {
 			 */
 			try {
 				this.init();
+				
 			} catch (InterruptedException e) {
 				if (this.getBrowser() == null) {
 					return;

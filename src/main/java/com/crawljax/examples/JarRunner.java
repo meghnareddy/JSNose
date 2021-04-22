@@ -37,8 +37,6 @@ public final class JarRunner {
 			crawljax.run();
 		} catch (ConfigurationException e) {
 			e.printStackTrace();
-		} catch (CrawljaxException e) {
-			e.printStackTrace();
 		}
 	}
 }

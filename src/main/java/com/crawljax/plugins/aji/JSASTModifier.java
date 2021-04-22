@@ -20,25 +20,37 @@
 */
 package com.crawljax.plugins.aji;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.apache.log4j.Logger;
 import org.mozilla.javascript.CompilerEnvirons;
 import org.mozilla.javascript.Parser;
-import org.mozilla.javascript.Token;
-import org.mozilla.javascript.ast.*;
+import org.mozilla.javascript.ast.Assignment;
+import org.mozilla.javascript.ast.AstNode;
+import org.mozilla.javascript.ast.AstRoot;
+import org.mozilla.javascript.ast.Block;
+import org.mozilla.javascript.ast.BreakStatement;
+import org.mozilla.javascript.ast.ContinueStatement;
+import org.mozilla.javascript.ast.ExpressionStatement;
+import org.mozilla.javascript.ast.ForLoop;
+import org.mozilla.javascript.ast.FunctionNode;
+import org.mozilla.javascript.ast.IfStatement;
+import org.mozilla.javascript.ast.Name;
+import org.mozilla.javascript.ast.NodeVisitor;
+import org.mozilla.javascript.ast.ReturnStatement;
+import org.mozilla.javascript.ast.SwitchCase;
+import org.mozilla.javascript.ast.ThrowStatement;
+import org.mozilla.javascript.ast.TryStatement;
+import org.mozilla.javascript.ast.VariableDeclaration;
+import org.mozilla.javascript.ast.WhileLoop;
+
+import com.crawljax.plugins.aji.executiontracer.ProgramPoint;
 
 import codesmells.SmellDetector;
-
-import com.crawljax.core.CrawljaxController;
-import com.crawljax.examples.JSNoseExample;
-import com.crawljax.plugins.aji.executiontracer.ProgramPoint;
-import com.crawljax.util.Tree;
-import com.crawljax.util.TreeNode;
 
 /**
  * Abstract class that is used to define the interface and some functionality for the NodeVisitors
@@ -49,14 +61,12 @@ import com.crawljax.util.TreeNode;
  */
 public abstract class JSASTModifier implements NodeVisitor {
 
-	private final Map<String, String> mapper = new HashMap<String, String>();
+	private final Map<String, String> mapper = new HashMap<>();
 	
 	//Amin
-	private Tree<String> tree = new Tree<String>();
-    private ArrayList<TreeNode<String>> treeNodes = new ArrayList<TreeNode<String>>();
 	private SmellDetector smellDetector = new SmellDetector();
 
-	protected static final Logger LOGGER = Logger.getLogger(CrawljaxController.class.getName());
+	protected static final Logger LOGGER = Logger.getLogger(JSASTModifier.class);
 	
 	/**
 	 * This is used by the JavaScript node creation functions that follow.
@@ -69,14 +79,15 @@ public abstract class JSASTModifier implements NodeVisitor {
 	private static String scopeName = null;
 
 	//Added by Amin to store js corresponding name
-	protected String jsName = null;
+	protected static String jsName = null;
 	
 	/**
 	 * @param scopeName
 	 *            the scopeName to set
 	 */
-	public void setScopeName(String scopeName) {
-		this.scopeName = scopeName;
+	public static void setScopeName(String scopeName) {
+		
+		JSASTModifier.scopeName = scopeName;
 
 		//Amin: This is used to name the array which stores execution count for the scope in URL 
 		int index = scopeName.lastIndexOf('/');
@@ -149,7 +160,8 @@ public abstract class JSASTModifier implements NodeVisitor {
 
 		//System.out.print(code+"*******\n");
 
-		return p.parse(code, null, 0);
+		AstRoot parse = p.parse(code, null, 0);
+		return parse;
 	}
 
 	/**
@@ -280,31 +292,17 @@ public abstract class JSASTModifier implements NodeVisitor {
 	}
 	
 	
-	/**
-	 * JSNose version: AST actual node visiting method to detect code smells
-	 * 
-	 * @param node
-	 *            The node that is currently visited.
-	 * @return Whether to visit the children.
-	 */	//@Override
+	@Override
 	public boolean visit(AstNode node) {
+		
 		//Amin: This is to analyse AST for detecting code smells before JS code instrumentation
 		smellDetector.SetASTNode(node);
 		smellDetector.analyseAstNode();		
 		
 		// check if the file should be considered for coverage analysis
-		if (innstrumentForCoverage(scopeName)==true)
+		if (innstrumentForCoverage(scopeName))
 			visitAndInstrument(node);
 		
-		//TreeNode<String> n = new TreeNode<String>();
-		//n.setData(node.shortName());
-		//tree.setRootElement(n);
-
-		//TreeNode<String> n2 = new TreeNode<String>();
-		//n2.setData(node.shortName());
-		//n.addChild(n2);
-		
-		//System.out.println(tree.toString());
 		return true;
 	}
 	

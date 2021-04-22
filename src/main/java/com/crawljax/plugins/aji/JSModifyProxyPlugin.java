@@ -219,80 +219,26 @@ public class JSModifyProxyPlugin extends ProxyPlugin {
 			}else if (foundTagsWithJS){
 				SmellDetector.analyseCoupling("main_html", "", jsInTag);
 			}
-
-			
 			
 			AstRoot ast = null;
 
 			/* initialize JavaScript context */
-			Context cx = Context.enter();
 			//cx.setErrorReporter(new ConsoleErrorReporter());
 
 			/* create a new parser */
-			//CompilerEnvirons ce = new CompilerEnvirons();
-			//ce.setErrorReporter(new ConsoleErrorReporter());
-			Parser rhinoParser = new Parser(new CompilerEnvirons(), cx.getErrorReporter());
-			//Parser rhinoParser = new Parser(ce, cx.getErrorReporter());
+			Parser rhinoParser = new Parser(new CompilerEnvirons(), Context.enter().getErrorReporter());
 
 			/* parse some script and save it in AST */
 			ast = rhinoParser.parse(new String(input), scopename, 0);
 			
-			//System.out.println(ast.debugPrint());
-			
-			//System.out.println(makeTreeString(ast.debugPrint()));
-			
-			//LblTree lt1 = LblTree.fromString(makeTreeString(ast.debugPrint())); 
-			
-			//lt1.prettyPrint();
-			
-			//makeTreeString(ast.debugPrint());
-			
-			
-			/*Print out AST root to file*/
-			/*START*/
-			//rootCounter++;
-			/*try {
-				System.out.println("writing on " + this.jsSourceOutputFolder);
-				File file = new File(this.jsSourceOutputFolder + "/root" + rootCounter + ".js");
-				if (!file.exists()) {
-					file.createNewFile();
-				}
-				
-				FileOutputStream fop = new FileOutputStream(file);
-				
-				fop.write(input.getBytes());
-				fop.flush();
-				fop.close();
-			}
-			catch (IOException ioe) {
-				System.out.println("IO Exception");
-			}*/
-			/*END*/
-			
-
-			//System.out.println("AST BEFORE : ");
-			//System.out.println(ast.toSource());
-			
 			modifier.setScopeName(scopename);
 
 			modifier.start();
-
-
-//			System.out.println("PRINTING AST ROOT");
-//			for (Symbol s: ast.getSymbols()){
-//				int sType = s.getDeclType();
-//			    if (sType == Token.LP || sType == Token.VAR || sType == Token.LET || sType == Token.CONST){
-//			    	System.out.println("s.getName() : " + s.getName());
-//			    }
-//			}
-
 			
 			/* recurse through AST and statically analayze the code for smells*/
 			ast.visit(modifier);
-
 			
 			SmellDetector.generateReport(false);
-			
 
 			/*
 			 *  Printing the instrumented code to a file

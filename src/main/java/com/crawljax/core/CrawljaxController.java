@@ -1,11 +1,23 @@
 package com.crawljax.core;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.log4j.Logger;
+
 import com.crawljax.browser.BrowserPool;
 import com.crawljax.browser.EmbeddedBrowser;
 import com.crawljax.condition.browserwaiter.WaitConditionChecker;
 import com.crawljax.condition.crawlcondition.CrawlConditionChecker;
 import com.crawljax.condition.eventablecondition.EventableConditionChecker;
 import com.crawljax.condition.invariant.Invariant;
+import com.crawljax.core.configuration.CrawlElement;
 import com.crawljax.core.configuration.CrawlSpecificationReader;
 import com.crawljax.core.configuration.CrawljaxConfiguration;
 import com.crawljax.core.configuration.CrawljaxConfigurationReader;
@@ -16,19 +28,6 @@ import com.crawljax.oraclecomparator.StateComparator;
 import com.crawljax.plugins.aji.JSModifyProxyPlugin;
 
 import net.jcip.annotations.GuardedBy;
-
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.log4j.Logger;
-
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * The Crawljax Controller class is the core of Crawljax.
@@ -58,7 +57,7 @@ public class CrawljaxController implements CrawlQueueManager {
 	
 	// Amin: keeping track of executed lines of a js	
 	public synchronized void setCountList(String modifiedJS, Object counter){
-		ArrayList<Integer> countList = new ArrayList<Integer>();
+		ArrayList<Integer> countList = new ArrayList<>();
 		ArrayList c = (ArrayList) counter;
 		countList.clear(); // used as a temp list to be added to JSCountList
 
@@ -135,9 +134,6 @@ public class CrawljaxController implements CrawlQueueManager {
 	public boolean isRandomEventExec() {
 		return randomEventExec;
 	}
-
-	
-	
 	
 	private static final Logger LOGGER = Logger.getLogger(CrawljaxController.class.getName());
 
@@ -195,7 +191,6 @@ public class CrawljaxController implements CrawlQueueManager {
 		
 		this.domMutationNotifierPluginCheck =  crawlerReader.getDomMutationNotifierPluginCheck();
 
-
 		stateComparator = new StateComparator(crawlerReader.getOracleComparators());
 		invariantList = crawlerReader.getInvariants();
 		crawlConditionChecker = new CrawlConditionChecker(crawlerReader.getCrawlConditions());
@@ -217,10 +212,12 @@ public class CrawljaxController implements CrawlQueueManager {
 	 *             if the configuration fails.
 	 * @NotThreadSafe
 	 */
-	private CrawlerExecutor init() throws ConfigurationException {
+	private CrawlerExecutor init() {
+		
 		LOGGER.info("Starting Crawljax...");
 
 		LOGGER.info("Used plugins:");
+		
 		CrawljaxPluginsUtil.loadPlugins(configurationReader.getPlugins());
 
 		if (configurationReader.getProxyConfiguration() != null) {
@@ -237,13 +234,7 @@ public class CrawljaxController implements CrawlQueueManager {
 		        "Crawl depth: " + configurationReader.getCrawlSpecificationReader().getDepth());
 		LOGGER.info("Crawljax initialized!");
 
-
 		int numberOfThreads = configurationReader.getThreadConfigurationReader().getNumberThreads();
-		
-		// Amin: Check if is diverse crawling, it needs another thread (DiverseCrawlingManager)
-		// NOTE: This is removed since we do not used multi-threading for diverse crawling at this version
-		//if (diverseCrawling)
-		//	numberOfThreads++; // need for another thread (DiverseCrawlingManager)*/
 		
 		return new CrawlerExecutor(numberOfThreads);
 	}
@@ -266,9 +257,8 @@ public class CrawljaxController implements CrawlQueueManager {
 	 * Checks if all crawlers are waiting. 
 	 */	
 	public boolean allCrawlersWaiting(){
-		if ( waitingCrawlerList.size() == configurationReader.getThreadConfigurationReader().getNumberThreads())
-			return true;
-		return false;
+		
+		return waitingCrawlerList.size() == configurationReader.getThreadConfigurationReader().getNumberThreads();
 	}
 	
 	/**
@@ -282,9 +272,6 @@ public class CrawljaxController implements CrawlQueueManager {
 		return false;
 	}	
 	
-	
-	
-	
 	/**
 	 * Run Crawljax.
 	 *
@@ -294,17 +281,13 @@ public class CrawljaxController implements CrawlQueueManager {
 	 *             if crawljax configuration fails.
 	 * @NotThreadSafe
 	 */
-	public final void run() throws CrawljaxException, ConfigurationException {
-		//Amin: This is removed since we do not used multi-threading for diverse crawling at this version
-		//DiverseCrawlingManager diverseCrawlingManager = new DiverseCrawlingManager(this);
-		//if (diverseCrawling){
-		//	workQueue.execute(diverseCrawlingManager);
-		//}
+	public final void run() {
 		
 		startCrawl = System.currentTimeMillis();
 
+		List<CrawlElement> allIncludedCrawlElements = configurationReader.getAllIncludedCrawlElements();
 		LOGGER.info(
-		        "Start crawling with " + configurationReader.getAllIncludedCrawlElements().size()
+		        "Start crawling with " + allIncludedCrawlElements.size()
 		                + " crawl elements");
 
 		// Create the initailCrawler
@@ -312,15 +295,11 @@ public class CrawljaxController implements CrawlQueueManager {
 	
 		// Start the Crawling by adding the initialCrawler to the the workQueue.
 		addWorkToQueue(initialCrawler);
-
 		
 		try {
 			// Block until the all the jobs are done
 			workQueue.waitForTermination();
 			
-			// Amin: Terminating the diverseCrawlingManager. This is removed since we do not used multi-threading for diverse crawling at this version
-			//if (diverseCrawling)
-			//	diverseCrawlingManager.finishedWorking();
 		} catch (InterruptedException e) {
 			LOGGER.error(e.getMessage(), e);
 		}
@@ -339,15 +318,16 @@ public class CrawljaxController implements CrawlQueueManager {
 		 */
 		Thread shutdownThread = browserPool.close();
 
-		// TODO Stefan; Now we "re-request" a browser instance for the PostCrawlingPlugins Thread,
-		// this is not ideal...
 		EmbeddedBrowser b = null;
+		
 		try {
 			b = this.getBrowserPool().requestBrowser();
 		} catch (InterruptedException e1) {
 			LOGGER.warn("Re-Request for a browser was interrupted", e1);
 		}
+		
 		CrawljaxPluginsUtil.runPostCrawlingPlugins(session);
+		
 		this.getBrowserPool().freeBrowser(b);
 
 		this.shutdown(timeCrawlCalc);
@@ -478,12 +458,16 @@ public class CrawljaxController implements CrawlQueueManager {
 	 * The general shutdown procedure without running plugins or using browsers.
 	 */
 	private void shutdown(long timeCrawlCalc) {
+		
 		StateFlowGraph stateFlowGraph = this.getSession().getStateFlowGraph();
+		
 		for (Eventable c : stateFlowGraph.getAllEdges()) {
 			LOGGER.info("Interaction Element= " + c.toString());
 		}
+		
 		LOGGER.info("Total Crawling time(" + timeCrawlCalc + "ms) ~= "
 		        + formatRunningTime(timeCrawlCalc));
+		
 		LOGGER.info("EXAMINED ELEMENTS: " + elementChecker.numberOfExaminedElements());
 		LOGGER.info("CLICKABLES: " + stateFlowGraph.getAllEdges().size());
 		LOGGER.info("STATES: " + stateFlowGraph.getAllStates().size());

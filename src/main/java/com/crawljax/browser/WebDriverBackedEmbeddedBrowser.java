@@ -170,6 +170,7 @@ public final class WebDriverBackedEmbeddedBrowser implements EmbeddedBrowser {
 	 */
 	public static WebDriverBackedEmbeddedBrowser withDriver(WebDriver driver,
 	        List<String> filterAttributes, long crawlWaitEvent, long crawlWaitReload) {
+		
 		return new WebDriverBackedEmbeddedBrowser(driver, filterAttributes, crawlWaitEvent,
 		        crawlWaitReload);
 	}

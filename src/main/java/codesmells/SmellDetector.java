@@ -13,6 +13,9 @@ import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.*;
 import org.w3c.dom.Node;
 
+import com.crawljax.plugins.aji.JSASTModifier;
+import com.crawljax.plugins.aji.executiontracer.AstInstrumenter;
+
 /**
  * This is the main JSNose smell detection class 
  * 
@@ -91,34 +94,30 @@ public class SmellDetector {
 	}
 
 	
-	private static HashSet<SmellLocation> refusedBequestObjLocation = new HashSet<SmellLocation>();	// keeping objects which refuse bequests
+	private static HashSet<SmellLocation> refusedBequestObjLocation = new HashSet<>();	// keeping objects which refuse bequests
 
-	private static HashSet<SmellLocation> lazyObjectsLocation = new HashSet<SmellLocation>();	// keeping lazy objects
+	private static HashSet<SmellLocation> lazyObjectsLocation = new HashSet<>();	// keeping lazy objects
 
-	private static HashSet<SmellLocation> largeObjectsLocation = new HashSet<SmellLocation>();	// keeping large objects
+	private static HashSet<SmellLocation> largeObjectsLocation = new HashSet<>();	// keeping large objects
 	
-	private static HashSet<SmellLocation> longPrototypeChainObjLocation = new HashSet<SmellLocation>();	// keeping objects with long prototype chain
+	private static HashSet<SmellLocation> longPrototypeChainObjLocation = new HashSet<>();	// keeping objects with long prototype chain
 	
 	// list of objects to ignore in reporting large/lazy object and refused bequest
-	private static ArrayList<String> objectsToIgnore = new ArrayList<String>();	
-	
+	private static ArrayList<String> objectsToIgnore = new ArrayList<>();	
 	
 	private boolean checkForUnreachable = false;
 	private int levelToCheckForReachability = 0;
-	private static HashSet<SmellLocation> unReachable = new HashSet<SmellLocation>();	// keeping unreachable code line number
-
+	private static HashSet<SmellLocation> unReachable = new HashSet<>();	// keeping unreachable code line number
 	
 	/**
 	 * This list is for keeping name of candidate javascript objects found in the code
 	 * they are called candidate since some my not be actual objects
 	 */
-	private static List<String> candidateJSObjectList = new ArrayList<String>();
+	private static List<String> candidateJSObjectList = new ArrayList<>();
 
 	public static List<String> getcandidateJSObjectList(){
 		return candidateJSObjectList;
 	}
-	
-	
 	
 	public SmellDetector() {
 		ASTNode = null;
@@ -142,7 +141,6 @@ public class SmellDetector {
 		objectsToIgnore.add("setTimeout");
 	}
 	
-
 	public void SetASTNode(AstNode node) {
 		ASTNode = node;
 	}
@@ -152,7 +150,6 @@ public class SmellDetector {
 	public static void setJSName(String jsName) {
 		SmellDetector.jsFileName = jsName;
 	}
-	
 	
 	/**
 	 * Showing list of smells when all AST nodes were visited. The method is static to be called in JSModifyProxyPlugin.modifyJS()
@@ -451,26 +448,20 @@ public class SmellDetector {
 		int type = ASTNode.getType();
 		int ASTDepth = ASTNode.depth();
 		
-		//System.out.println("node.shortName() : " + ASTNodeName);
-		//System.out.println("node.depth() : " + ASTDepth);
-		//System.out.println("node.getLineno() : " + (ASTNode.getLineno()+1));
-		
 		checkLongMessageChain();   // also used to detect message chain used in object recognition
 
 		// check if we are in the up the currentObjectNodeDepth
-		if (ASTDepth < currentObjectNodeDepth && lastMessageChain==1 && ignoreDepthChange==false){  // dealing with a.b.c = ... patterns  
+		if (ASTDepth < currentObjectNodeDepth && lastMessageChain==1 && ignoreDepthChange){  // dealing with a.b.c = ... patterns  
 			nextNameIsProperty = false;
-			//nextNameIsObject = true;
-			//System.out.println("analyseAstNode(): Level changed! nextNameIsObject");
-			//System.out.println("analyseAstNode(): Level changed! nextName is not property anymore");
 		}
 		
 		// check if we are in LHS of the current assignment, used to check if a property is defined and not just used
 		if (ASTDepth==assignmentNodeDepth+1){
-			if (assignmentLHSVisited == false){
+			if (assignmentLHSVisited){
 				assignmentLHSVisited = true;
-			}else
+			}else {
 				LHS = false;
+			}
 		}
 
 		
@@ -484,34 +475,18 @@ public class SmellDetector {
 			    	globals.add(s.getName());
 			    }
 			}
-			//System.out.println();
-		}
-//		else if (ASTNodeName.equals("FunctionNode")){
-//			FunctionNode f = (FunctionNode) ASTNode;
-//			for (Symbol s: f.getSymbols()){
-//				int sType = s.getDeclType();
-//			    if (sType == Token.LP || sType == Token.VAR || sType == Token.LET || sType == Token.CONST){
-//			    	System.out.println("s.getName() : " + s.getName());
-//			    }
-//			}
-//			
-//			System.out.println(f.getSymbolTable());
-//			System.out.println(f.getSymbols());
-//		}        
-		
-		
 		
 		// check if the new statement is after return, break, continue, or throw AND at the same level
 		if (checkForUnreachable==true){
 			if (ASTNode.depth() == levelToCheckForReachability){
-				//System.out.println("Unreachable code at line: " + (ASTNode.getLineno()+1));
 				SmellLocation sl = new SmellLocation("Unreachable code",jsFileName,(ASTNode.getLineno()+1));
 				unReachable.add(sl);
 			}
 			checkForUnreachable = false;
 		}
 		
-		
+
+		System.out.println("############################################DSSSSSSSSSEVAAAAAAAAAAAAAAAAAAAAAAAAAL");
 		
 		if (ASTNodeName.equals("Name"))
 			analyseNameNode();
@@ -541,20 +516,14 @@ public class SmellDetector {
 			isSwitchSmell();
 		else if (type == Token.THIS)
 			thisInClosure();
-		
-
-		//System.out.println();
-
-		//System.out.println("node.toSource() : " + node.toSource());
-		//System.out.println("node.getType() : " + node.getType());
-		//System.out.println("node.getAstRoot() : " + node.getAstRoot());
-		//System.out.println("node.debugPrint() : " + node.debugPrint());
+		}
 	}
 
 
 	// checking if "this" is used in closure
 	private void thisInClosure() {
 		if (scopeChainLength > 1){
+			
 			SmellLocation sl = new SmellLocation("this in closure", jsFileName, ASTNode.getLineno()+1);
 			closureSmellLocation.add(sl);
 		}
@@ -929,6 +898,8 @@ public class SmellDetector {
 		
 		FunctionCall fcall = (FunctionCall) ASTNode;
 		//System.out.println(ASTNode.debugPrint());
+		// Check if it is eval
+		System.out.println("###################################>>>>>>>>>>>>>>>>>>>>>>>>>>>> " + fcall.shortName());
 		
 		// check for callback
 		boolean detected = false;
@@ -961,7 +932,7 @@ public class SmellDetector {
 			jsObjects.get(currentObjectIndex).setPrototype(currentPrototype);
 
 		}
-		
+
 	}
 
 

@@ -38,74 +38,18 @@ public class WebDriverBrowserBuilder implements EmbeddedBrowserBuilder {
 
 		// Determine the requested browser type
 		switch (configuration.getBrowser()) {
-			case firefox:
-				if (configuration.getProxyConfiguration() != null) {
-					FirefoxProfile profile = new FirefoxProfile();
-
-					profile.setPreference("network.proxy.http", configuration
-					        .getProxyConfiguration().getHostname());
-					profile.setPreference("network.proxy.http_port", configuration
-					        .getProxyConfiguration().getPort());
-					profile.setPreference("network.proxy.type", configuration
-					        .getProxyConfiguration().getType().toInt());
-					/* use proxy for everything, including localhost */
-					profile.setPreference("network.proxy.no_proxies_on", "");
-
-					return WebDriverBackedEmbeddedBrowser.withDriver(new FirefoxDriver(profile),
-					        filterAttributes, crawlWaitReload, crawlWaitEvent);
-				}
-
-				return WebDriverBackedEmbeddedBrowser.withDriver(new FirefoxDriver(),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
-
-			case ie:
-				return WebDriverBackedEmbeddedBrowser.withDriver(new InternetExplorerDriver(),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
-
+			
 			case chrome:
-				return WebDriverBackedEmbeddedBrowser.withDriver(new ChromeDriver(),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
+			WebDriverBackedEmbeddedBrowser withDriver = WebDriverBackedEmbeddedBrowser.withDriver(new ChromeDriver(),
+			        configuration.getFilterAttributeNames(), configuration
+			                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
+			                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
+			
+			
+			return withDriver;
 
-			case remote:
-				return WebDriverBackedEmbeddedBrowser.withRemoteDriver(
-				        configuration.getRemoteHubUrl(), configuration.getFilterAttributeNames(),
-				        configuration.getCrawlSpecificationReader().getWaitAfterEvent(),
-				        configuration.getCrawlSpecificationReader().getWaitAfterReloadUrl());
-
-			case htmlunit:
-				return WebDriverBackedEmbeddedBrowser.withDriver(new HtmlUnitDriver(true),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
-
-			case iphone:
-				try {
-					return WebDriverBackedEmbeddedBrowser.withDriver(new IPhoneDriver(),
-					        configuration.getFilterAttributeNames(), configuration
-					                .getCrawlSpecificationReader().getWaitAfterEvent(),
-					        configuration.getCrawlSpecificationReader().getWaitAfterReloadUrl());
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-			case android:
-				return WebDriverBackedEmbeddedBrowser.withDriver(new AndroidDriver(),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
-
-			default:
-				return WebDriverBackedEmbeddedBrowser.withDriver(new FirefoxDriver(),
-				        configuration.getFilterAttributeNames(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterEvent(), configuration
-				                .getCrawlSpecificationReader().getWaitAfterReloadUrl());
+			
 		}
+		return null;
 	}
 }
