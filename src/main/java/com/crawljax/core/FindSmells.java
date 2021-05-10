@@ -2,14 +2,13 @@ package com.crawljax.core;
 
 import java.util.HashSet;
 
-import org.mozilla.javascript.CompilerEnvirons;
-import org.mozilla.javascript.Context;
-import org.mozilla.javascript.IRFactory;
-import org.mozilla.javascript.Parser;
+import org.mozilla.javascript.*;
+import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
 import org.mozilla.javascript.ast.AstRoot;
 
 import codesmells.SmellDetector;
+import org.mozilla.javascript.ast.ExpressionStatement;
 
 /**
  * The Class FindSmells.
@@ -33,8 +32,8 @@ public class FindSmells {
 			SmellDetector.analyseCoupling("main_html", "", jsInTag);
 		}
 		
-		AstNode ast = null;
-		
+		AstRoot ast = null;
+
 //		CompilerEnvirons env = new CompilerEnvirons();
 //
 //		env.setRecoverFromErrors(true);
@@ -46,10 +45,28 @@ public class FindSmells {
 		Parser rhinoParser = new Parser(new CompilerEnvirons(), Context.enter().getErrorReporter());
 
 		/* parse some script and save it in AST */
-		ast = rhinoParser.parse(input , jsName, 1);
-		
-		smellDetector.SetASTNode(ast);
-		smellDetector.analyseAstNode();		
+		try{
+			ast = rhinoParser.parse(input , jsName, 1);
+		} catch (org.mozilla.javascript.EvaluatorException e) {
+			System.out.println("Error parsing js  ");
+			System.out.println(e);
+			throw  e;
+		}
+
+
+		for (Node an :
+				ast) {
+			AstNode myAst = (AstNode)an;
+			System.out.println(myAst.shortName());
+			String source = myAst.toSource();
+			System.out.println("Source " + source);
+			smellDetector.SetASTNode(myAst);
+			smellDetector.analyseAstNode();
+		}
+		smellDetector.writeReportTofile();
+
+//		smellDetector.SetASTNode(ast);
+//		smellDetector.analyseAstNode();
 		
 	}
 
