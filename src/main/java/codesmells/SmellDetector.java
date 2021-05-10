@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
+import org.mozilla.javascript.Node;
 import org.mozilla.javascript.Token;
 import org.mozilla.javascript.ast.*;
-import org.w3c.dom.Node;
 
 import com.crawljax.plugins.aji.JSASTModifier;
 import com.crawljax.plugins.aji.executiontracer.AstInstrumenter;
@@ -801,6 +801,13 @@ public class SmellDetector {
     public void analyseFunctionNode() {
 
         FunctionNode f = (FunctionNode) ASTNode;
+        AstNode tmpNode = ASTNode;
+        for (Node n :
+                ((FunctionNode) ASTNode).getBody()) {
+            this.SetASTNode((AstNode) n);
+            this.analyseAstNode();
+        }
+        this.SetASTNode(tmpNode); //Reset To function node
 
         String fName = "";
         if (f.getFunctionName() != null) {
@@ -895,6 +902,7 @@ public class SmellDetector {
         }
         //System.out.println("analyseFunctionNode(): nextNameIsProperty");
         nextNameIsProperty = true;
+
     }
 
 
